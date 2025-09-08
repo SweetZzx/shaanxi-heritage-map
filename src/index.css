@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .btn {
+    @apply px-3 py-1.5 rounded-md bg-slate-700 text-white hover:bg-slate-800
+      dark:bg-slate-600 dark:hover:bg-slate-500 transition;
+  }
+  .btn-outline {
+    @apply px-3 py-1.5 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100
+      dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800 transition;
+  }
+  .tag {
+    @apply inline-flex items-center px-2 py-1 rounded-md text-sm bg-slate-200 hover:bg-slate-300
+      dark:bg-slate-700 dark:hover:bg-slate-600 cursor-pointer;
+  }
+  .card {
+    @apply rounded-lg border border-slate-200 bg-white shadow-sm p-4
+      dark:bg-slate-800 dark:border-slate-700;
+  }
+}
