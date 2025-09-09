@@ -20,9 +20,6 @@ export default function Header() {
           <button className="btn-outline" onClick={() => setDark((v) => !v)}>
             {dark ? "切换亮色" : "切换暗色"}
           </button>
-          <a className="btn" href="https://github.com/${GH_USER}/${REPO_NAME}" target="_blank" rel="noreferrer">
-            GitHub
-          </a>
         </div>
       </div>
     </header>
