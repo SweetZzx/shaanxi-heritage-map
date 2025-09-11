@@ -1,51 +1,103 @@
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 
 const OpeningAnimation = ({ onComplete, minDuration = 2000 }) => {
   const [isVisible, setIsVisible] = useState(true);
   const [shouldUnmount, setShouldUnmount] = useState(false);
+  const completedRef = useRef(false); // 🎯 防止重复完成
+  const timerRef = useRef(null);
 
   // 🎯 性能优化：使用useCallback避免重复创建函数
   const handleAnimationComplete = useCallback(() => {
+    // 🚫 防止重复触发
+    if (completedRef.current) {
+      console.warn('⚠️ 动画完成处理被重复调用，忽略');
+      return;
+    }
+    
+    completedRef.current = true;
     console.log('🎬 开场动画完成，准备退场');
     setIsVisible(false);
     
     // 🚀 退场动画完成后完全卸载组件
     setTimeout(() => {
+      if (!completedRef.current) return; // 双重检查
+      
       setShouldUnmount(true);
       onComplete?.();
     }, 1000); // 退场动画1秒
   }, [onComplete]);
 
-  // 🎯 性能优化：最小显示时间，确保用户能看到动画
+  // 🎯 最小显示时间，确保用户能看到动画
   useEffect(() => {
-    const timer = setTimeout(() => {
-      handleAnimationComplete();
+    // 清理之前的定时器
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+    
+    timerRef.current = setTimeout(() => {
+      if (!completedRef.current) {
+        handleAnimationComplete();
+      }
     }, minDuration);
 
-    return () => clearTimeout(timer);
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
   }, [handleAnimationComplete, minDuration]);
 
+  // 🚀 阻止动画期间的所有交互
+  useEffect(() => {
+    if (isVisible && !completedRef.current) {
+      // 禁用滚动
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      
+      // 添加全局事件阻止
+      const preventInteraction = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      };
+      
+      const events = ['click', 'keydown', 'touchstart', 'wheel'];
+      events.forEach(event => {
+        document.addEventListener(event, preventInteraction, { 
+          capture: true, 
+          passive: false 
+        });
+      });
+      
+      return () => {
+        document.body.style.overflow = originalOverflow;
+        events.forEach(event => {
+          document.removeEventListener(event, preventInteraction, { capture: true });
+        });
+      };
+    }
+  }, [isVisible]);
+
   // 🚀 性能优化：动画完成后完全卸载，释放内存
-  if (shouldUnmount) {
+  if (shouldUnmount || completedRef.current) {
     return null;
   }
 
   return (
     <div 
-      className={`fixed inset-0 z-50 flex items-center justify-center transition-all duration-1000 ease-out ${
+      className={`fixed inset-0 z-[10000] flex items-center justify-center transition-all duration-1000 ease-out pointer-events-auto ${
         isVisible ? 
         'opacity-100 scale-100' : 
-        'opacity-0 scale-110 pointer-events-none'
+        'opacity-0 scale-110'
       }`}
       style={{
         background: 'radial-gradient(ellipse at center, #0d47a1 0%, #1565c0 25%, #1976d2 50%, #0a1929 100%)',
-        // 🎯 性能优化：使用will-change提示浏览器优化
         willChange: isVisible ? 'transform, opacity' : 'auto'
       }}
     >
       
-      {/* 🌊 波纹扩散效果 - 性能优化版本 */}
+      {/* 🌊 波纹扩散效果 */}
       <div className="absolute inset-0 flex items-center justify-center">
         {[...Array(5)].map((_, i) => (
           <div
@@ -57,7 +109,6 @@ const OpeningAnimation = ({ onComplete, minDuration = 2000 }) => {
               animationDelay: `${i * 0.3}s`,
               animationDuration: '2s',
               opacity: 0.6 - i * 0.1,
-              // 🎯 性能优化：仅在可见时启用will-change
               willChange: isVisible ? 'transform, opacity' : 'auto'
             }}
           />
@@ -114,7 +165,7 @@ const OpeningAnimation = ({ onComplete, minDuration = 2000 }) => {
         </div>
       </div>
 
-      {/* ✨ 粒子装饰 - 性能优化版本 */}
+      {/* ✨ 粒子装饰 */}
       <div className="absolute inset-0 pointer-events-none">
         {[...Array(20)].map((_, i) => (
           <div

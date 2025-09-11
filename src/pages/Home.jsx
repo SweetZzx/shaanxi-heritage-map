@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useMemo } from 'react';
 import MapView from '../components/MapView';
 import HeritageMarkerLayer from '../components/HeritageMarkerLayer';
 import HeritageDataManager, { useHeritageData } from '../components/HeritageDataManager';
@@ -12,6 +12,7 @@ const useMapController = () => {
   const markerLayerRef = useRef(null);
   const [mapReady, setMapReady] = useState(false);
   const [mapError, setMapError] = useState(null);
+  const mapReadyRef = useRef(false); // 🎯 防止重复触发
 
   // 使用数据管理上下文
   const {
@@ -23,9 +24,17 @@ const useMapController = () => {
 
   // 地图就绪回调
   const handleMapReady = useCallback((map) => {
+    // 🚫 防止重复触发
+    if (mapReadyRef.current) {
+      console.warn('⚠️ 地图就绪回调被重复调用，忽略');
+      return;
+    }
+    
+    mapReadyRef.current = true;
     mapInstanceRef.current = map;
     setMapReady(true);
     setMapError(null);
+    console.log('✅ 地图初始化完成，防重复触发已启用');
   }, []);
 
   // 地图错误处理
@@ -33,6 +42,7 @@ const useMapController = () => {
     console.error('地图错误:', error);
     setMapError(error);
     setMapReady(false);
+    mapReadyRef.current = false; // 重置状态
   }, []);
 
   // 标记层就绪回调
@@ -103,8 +113,8 @@ const useMapController = () => {
   };
 };
 
-// 内部组件 - 使用数据管理上下文
-const MapWithHeritage = React.memo(() => {
+// 内部组件 - 添加isInteractive prop
+const MapWithHeritage = React.memo(({ isInteractive }) => {
   const [activeFeature, setActiveFeature] = useState(null);
   
   // 使用地图控制器钩子
@@ -129,8 +139,14 @@ const MapWithHeritage = React.memo(() => {
     reset
   } = useHeritageData();
 
-  // 侧边栏菜单项点击处理
+  // 🎯 使用useMemo缓存侧边栏菜单项点击处理逻辑，避免不必要的重新渲染
   const handleMenuItemClick = useCallback((menuItem) => {
+    if (!isInteractive) {
+      console.log('🚫 交互被禁用，忽略菜单操作:', menuItem);
+      return;
+    }
+    
+    console.log('🎯 处理菜单操作:', menuItem);
     setActiveFeature(menuItem.id);
 
     switch (menuItem.id) {
@@ -163,13 +179,17 @@ const MapWithHeritage = React.memo(() => {
       default:
         break;
     }
-  }, [showAll, fitToMarkers, resetView, zoomTo, selectedHeritage, reset]);
+  }, [isInteractive, showAll, fitToMarkers, resetView, zoomTo, selectedHeritage, reset]);
+
+  // 🎯 优化：仅在交互状态变化时重新渲染
+  console.log(`🔄 MapWithHeritage 渲染状态: isInteractive=${isInteractive}, mapReady=${mapReady}`);
 
   return (
     <div className="w-screen h-screen relative overflow-hidden bg-slate-900">
       
-      {/* 地图组件 */}
+      {/* 地图组件 - 添加稳定的key */}
       <MapView 
+        key="main-map"
         onMapReady={handleMapReady}
         enableClickLogging={false}
         showStatusBar={true}
@@ -178,6 +198,7 @@ const MapWithHeritage = React.memo(() => {
       {/* 标记渲染层 */}
       {mapInstance && mapReady && (
         <HeritageMarkerLayer
+          key="heritage-markers"
           mapInstance={mapInstance}
           data={data?.filtered || []}
           visible={data?.visible || false}
@@ -188,12 +209,16 @@ const MapWithHeritage = React.memo(() => {
         />
       )}
       
-      {/* 侧边栏菜单 */}
-      <SideMenu onMenuItemClick={handleMenuItemClick} />
+      {/* 侧边栏菜单 - 传递交互状态 */}
+      <SideMenu 
+        key="side-menu"
+        onMenuItemClick={handleMenuItemClick} 
+        isInteractive={isInteractive}
+      />
 
       {/* 错误提示 */}
       {mapError && (
-        <div className="fixed top-4 right-4 z-[9999] bg-red-900/90 text-white px-4 py-2 rounded-lg shadow-lg">
+        <div className="fixed top-4 right-4 z-[1001] bg-red-900/90 text-white px-4 py-2 rounded-lg shadow-lg">
           地图加载失败: {mapError.message}
         </div>
       )}
@@ -201,9 +226,16 @@ const MapWithHeritage = React.memo(() => {
   );
 });
 
-// 键盘快捷键处理组件
-const KeyboardShortcuts = ({ onShortcut }) => {
+// 键盘快捷键处理组件 - 添加isInteractive检查
+const KeyboardShortcuts = React.memo(({ onShortcut, isInteractive }) => {
   React.useEffect(() => {
+    if (!isInteractive) {
+      console.log('🚫 键盘快捷键被禁用');
+      return;
+    }
+    
+    console.log('✅ 键盘快捷键已启用');
+    
     const handleKeyPress = (event) => {
       switch (event.key) {
         case 'Escape':
@@ -228,33 +260,52 @@ const KeyboardShortcuts = ({ onShortcut }) => {
     return () => {
       window.removeEventListener('keydown', handleKeyPress);
     };
-  }, [onShortcut]);
+  }, [onShortcut, isInteractive]);
 
   return null;
-};
+});
 
-// 主页组件
-const Home = () => {
+// 主页组件 - 添加isInteractive prop和优化
+const Home = ({ isInteractive = true }) => {
   const [shortcutHandler, setShortcutHandler] = useState(null);
+  const interactiveRef = useRef(isInteractive);
+
+  // 更新交互状态引用
+  React.useEffect(() => {
+    interactiveRef.current = isInteractive;
+    console.log(`🎮 交互状态更新: ${isInteractive ? '启用' : '禁用'}`);
+  }, [isInteractive]);
 
   // 快捷键处理
   const handleShortcut = useCallback((action) => {
+    if (!interactiveRef.current) {
+      console.log('🚫 快捷键被禁用:', action);
+      return;
+    }
+    
     if (shortcutHandler) {
       shortcutHandler({ id: action, label: '快捷键操作' });
     }
   }, [shortcutHandler]);
 
+  // 🎯 使用useMemo缓存HeritageDataManager的props
+  const heritageDataProps = useMemo(() => ({
+    data: heritageData,
+    onSelectionChange: (selection) => {
+      // 可以在这里添加额外的处理逻辑
+      console.log('📊 数据选择变化:', selection);
+    }
+  }), []);
+
   return (
-    <HeritageDataManager 
-      data={heritageData}
-      onSelectionChange={(selection) => {
-        // 可以在这里添加额外的处理逻辑
-      }}
-    >
-      <MapWithHeritage />
+    <HeritageDataManager {...heritageDataProps}>
+      <MapWithHeritage isInteractive={isInteractive} />
       
       {/* 键盘快捷键支持 */}
-      <KeyboardShortcuts onShortcut={handleShortcut} />
+      <KeyboardShortcuts 
+        onShortcut={handleShortcut} 
+        isInteractive={isInteractive}
+      />
       
       {/* 设置快捷键处理器的引用 */}
       <div style={{ display: 'none' }} ref={(el) => {

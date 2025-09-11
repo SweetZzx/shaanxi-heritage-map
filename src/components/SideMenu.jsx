@@ -1,12 +1,19 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import HeritageControlWidget from './widgets/HeritageControlWidget';
 import RegionDistributionWidget from './widgets/RegionDistributionWidget';
 import StatisticsWidget from './widgets/StatisticsWidget';
 
-const SideMenu = ({ onMenuItemClick }) => {
+const SideMenu = ({ onMenuItemClick, isInteractive = true }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeWidget, setActiveWidget] = useState('heritage-control');
+
+  // 🎯 当交互被禁用时，强制关闭菜单
+  useEffect(() => {
+    if (!isInteractive && isOpen) {
+      setIsOpen(false);
+    }
+  }, [isInteractive, isOpen]);
 
   // Widget配置
   const widgetConfigs = [
@@ -38,48 +45,72 @@ const SideMenu = ({ onMenuItemClick }) => {
 
   // 切换菜单显示状态
   const toggleMenu = useCallback(() => {
+    if (!isInteractive) return; // 🚫 交互被禁用时不允许操作
+    
     setIsOpen(prev => !prev);
     console.log('菜单切换:', !isOpen);
-  }, [isOpen]);
+  }, [isInteractive, isOpen]);
 
   // 组件切换
   const handleWidgetChange = useCallback((widgetId) => {
+    if (!isInteractive) return; // 🚫 交互被禁用时不允许操作
+    
     setActiveWidget(widgetId);
     console.log('切换组件:', widgetId);
-  }, []);
+  }, [isInteractive]);
 
   // 点击菜单栏外关闭菜单
   const handleMenuOutsideClick = useCallback((e) => {
+    if (!isInteractive) return; // 🚫 交互被禁用时不允许操作
+    
     if (e.target === e.currentTarget) {
       setIsOpen(false);
     }
-  }, []);
+  }, [isInteractive]);
 
   // 处理组件内的操作
   const handleWidgetAction = useCallback((action) => {
+    if (!isInteractive) return; // 🚫 交互被禁用时不允许操作
+    
     console.log('Widget操作:', action);
     if (onMenuItemClick) {
       onMenuItemClick(action);
     }
-  }, [onMenuItemClick]);
+  }, [isInteractive, onMenuItemClick]);
+
+  // 🎯 交互被禁用时不渲染任何可交互内容
+  if (!isInteractive) {
+    return null;
+  }
 
   return (
     <>
       {/* 悬浮触发球 */}
       {!isOpen && (
-        <div className="fixed top-6 left-6 z-[9999] pointer-events-auto">
+        <div className="fixed top-6 left-6 z-[1000] pointer-events-auto">
           <button
             onClick={toggleMenu}
-            className="group relative w-14 h-14 rounded-full shadow-lg transition-all duration-300 transform hover:scale-110 bg-slate-800/80 border-2 border-cyan-400/60 hover:bg-slate-700/90 hover:border-cyan-300/80 backdrop-blur-md"
+            disabled={!isInteractive}
+            className={`group relative w-14 h-14 rounded-full shadow-lg transition-all duration-300 transform hover:scale-110 backdrop-blur-md ${
+              isInteractive 
+                ? 'bg-slate-800/80 border-2 border-cyan-400/60 hover:bg-slate-700/90 hover:border-cyan-300/80 cursor-pointer' 
+                : 'bg-slate-800/40 border-2 border-gray-500/30 cursor-not-allowed opacity-50'
+            }`}
             aria-label="打开菜单"
           >
             <div className="absolute inset-0 flex items-center justify-center">
-              <svg className="w-6 h-6 text-cyan-300 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className={`w-6 h-6 transition-transform duration-300 ${
+                isInteractive ? 'text-cyan-300' : 'text-gray-400'
+              }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </div>
-            <div className="absolute inset-0 rounded-full bg-cyan-400/20 scale-0 group-hover:scale-100 transition-transform duration-300"></div>
-            <div className="absolute inset-0 rounded-full border border-cyan-400/30 scale-110 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            {isInteractive && (
+              <>
+                <div className="absolute inset-0 rounded-full bg-cyan-400/20 scale-0 group-hover:scale-100 transition-transform duration-300"></div>
+                <div className="absolute inset-0 rounded-full border border-cyan-400/30 scale-110 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              </>
+            )}
           </button>
         </div>
       )}
@@ -87,7 +118,7 @@ const SideMenu = ({ onMenuItemClick }) => {
       {/* 侧边栏菜单 */}
       {isOpen && (
         <div 
-          className="fixed inset-0 z-[9998] pointer-events-auto"
+          className="fixed inset-0 z-[999] pointer-events-auto"
           onClick={handleMenuOutsideClick}
         >
           <div className="absolute top-0 left-0 h-full w-80 pointer-events-auto transform transition-transform duration-300 ease-out translate-x-0">
@@ -139,14 +170,12 @@ const SideMenu = ({ onMenuItemClick }) => {
                 )}
               </div>
 
-              {/* 动态组件内容区域 - 移除底部边距，占满剩余空间 */}
+              {/* 动态组件内容区域 */}
               <div className="flex-1 overflow-y-auto p-4 pb-6">
                 {WidgetComponent && (
                   <WidgetComponent onAction={handleWidgetAction} />
                 )}
               </div>
-              
-              {/* 删除了底部信息区域 */}
             </div>
           </div>
         </div>
