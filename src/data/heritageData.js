@@ -1,5 +1,5 @@
 // 24 条示例数据（经纬度大致分布在陕西省内）
-const MOCK = [
+const HERITAGE_DATA = [
   { id: "1", name: "秦腔传统戏剧", category: "传统戏剧", coords: { lat: 34.34, lng: 108.94 }, city: "西安", level: "省级", summary: "以高亢激越著称的关中地方戏，被誉为中国戏曲的活化石。", status: "在展" },
   { id: "2", name: "华阴老腔", category: "传统音乐", coords: { lat: 34.57, lng: 110.09 }, city: "渭南", level: "国家级", summary: "黄河流域古老的民间音乐形态，声如裂帛，气势恢宏。", status: "在展" },
   { id: "3", name: "社火舞蹈", category: "传统舞蹈", coords: { lat: 34.33, lng: 108.70 }, city: "咸阳", level: "市级", summary: "春节期间的民俗舞蹈表演，热闹非凡，寓意吉祥。", status: "在展" },
@@ -26,4 +26,4 @@ const MOCK = [
   { id: "24", name: "耀州瓷烧制技艺", category: "传统技艺", coords: { lat: 34.91, lng: 108.98 }, city: "铜川", level: "国家级", summary: "北方青瓷代表之一，工艺精湛，釉色青翠。", status: "在展" }
 ];
 
-export default MOCK;
+export default HERITAGE_DATA;

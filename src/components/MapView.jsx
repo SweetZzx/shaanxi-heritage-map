@@ -1,115 +1,305 @@
-import { useEffect, useRef } from "react";
-import AMapLoader from "@amap/amap-jsapi-loader";
 
-export default function MapView({ items, visible, base, roadnet, center, zoom, onMarkerClick }) {
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import AMapLoader from '@amap/amap-jsapi-loader';
+import OpeningAnimation from './OpeningAnimation';
+import MapStatusBar from './MapStatusBar';
+
+// 🎯 配置常量提取
+const MAP_CONFIG = {
+  key: "beed5a6b0db09b8b4f0c01d3b1b5a7d6",
+  version: "2.0",
+  plugins: [
+    "AMap.DistrictLayer", 
+    "AMap.TileLayer",
+    "AMap.Marker",
+    "AMap.InfoWindow",
+    "AMap.Geolocation",
+    "AMap.ToolBar",
+    "AMap.Scale"
+  ]
+};
+
+const INITIAL_MAP_OPTIONS = {
+  center: [108.95, 34.27],
+  zoom: 7,
+  viewMode: "3D",
+  pitch: 40,
+  mapStyle: "amap://styles/darkblue",
+  dragEnable: true,
+  zoomEnable: true,
+  scrollWheel: true,
+  rotateEnable: true,
+  pitchEnable: true,
+  showBuildingBlock: true,
+  showLabel: true
+};
+
+// 🎨 陕西省样式配置
+const SHAANXI_STYLES = {
+  province: {
+    zIndex: 8,
+    adcode: ["610000"],
+    depth: 0,
+    styles: {
+      fill: "rgba(64, 224, 255, 0.08)",
+      stroke: "#40E0FF",
+      "stroke-width": 3,
+    },
+  },
+  cities: {
+    zIndex: 10,
+    adcode: ["610000"],
+    depth: 1,
+    styles: {
+      fill: "rgba(30, 144, 255, 0.06)",
+      "city-stroke": "#1E90FF",
+      "stroke-width": 2,
+      "county-stroke": "#4682B4",
+      "county-stroke-width": 1,
+    },
+  }
+};
+
+// ✅ 使用默认参数替代 defaultProps
+const MapView = ({ 
+  onMapReady = null, 
+  className = '', 
+  style = {},
+  enableClickLogging = false,
+  showStatusBar = true  // 🎯 新增状态栏显示控制
+}) => {
   const mapRef = useRef(null);
-  const map = useRef(null);
-  const layers = useRef({ satellite: null, roadnet: null });
-  const markers = useRef([]);
+  const mapInstance = useRef(null);
+  const provinceLayers = useRef({});
+  const initializationRef = useRef(false);
+  
+  const [showAnimation, setShowAnimation] = useState(true);
+  const [mapReady, setMapReady] = useState(false);
+  const [mapError, setMapError] = useState(null);
 
-  // 初始化地图
-  useEffect(() => {
-    let destroyed = false;
-    
-    AMapLoader.load({
-      key: import.meta.env.VITE_AMAP_KEY,
-      version: "2.0",
-      plugins: ["AMap.Scale", "AMap.ToolBar"]
-    })
-      .then((AMap) => {
-        if (destroyed) return;
-        
-        map.current = new AMap.Map(mapRef.current, {
-          viewMode: "2D",
-          zoom,
-          center,
-        });
-        
-        map.current.addControl(new AMap.Scale());
-        map.current.addControl(new AMap.ToolBar());
+  // 🧹 清理地图资源的函数
+  const cleanupMapResources = useCallback(() => {
+    console.log('🧹 清理地图资源中...');
 
-        // 初始化图层
-        layers.current.satellite = new AMap.TileLayer.Satellite();
-        layers.current.roadnet = new AMap.TileLayer.RoadNet();
-
-        // 初始图层设置
-        if (base === "satellite") {
-          layers.current.satellite.setMap(map.current);
+    // 清理图层
+    Object.values(provinceLayers.current).forEach(layer => {
+      try {
+        if (layer && typeof layer.destroy === 'function') {
+          layer.destroy();
         }
-        if (roadnet) {
-          layers.current.roadnet.setMap(map.current);
-        }
-
-        // 初次渲染标注
-        renderMarkers(AMap, items, onMarkerClick);
-      })
-      .catch((e) => {
-        console.error("AMap load failed:", e);
-      });
-
-    return () => {
-      destroyed = true;
-      if (map.current) {
-        map.current.destroy();
-        map.current = null;
+      } catch (e) {
+        console.warn('图层清理警告:', e);
       }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    });
+    provinceLayers.current = {};
+
+    // 清理地图实例
+    if (mapInstance.current) {
+      try {
+        mapInstance.current.destroy();
+        console.log('✅ 地图实例已销毁');
+      } catch (e) {
+        console.warn('地图销毁警告:', e);
+      }
+      mapInstance.current = null;
+    }
+
+    initializationRef.current = false;
   }, []);
 
-  // 渲染标注点
-  const renderMarkers = (AMap, data, onClick) => {
-    // 清除旧标注
-    markers.current.forEach((m) => m.setMap(null));
-    markers.current = [];
+  // 🎯 创建地图实例的纯函数
+  const createMapInstance = useCallback((AMap) => {
+    if (!mapRef.current) {
+      console.warn('地图容器不存在');
+      return null;
+    }
 
-    if (!visible || !map.current) return;
+    if (mapInstance.current) {
+      console.log('🔄 检测到现有地图实例，先清理...');
+      cleanupMapResources();
+    }
 
-    data.forEach((project) => {
-      const marker = new AMap.Marker({
-        position: [project.coords.lng, project.coords.lat],
-        title: project.name,
-        anchor: "bottom-center",
-      });
+    try {
+      const map = new AMap.Map(mapRef.current, INITIAL_MAP_OPTIONS);
+      console.log('🗺️ 地图实例创建成功');
+      return map;
+    } catch (error) {
+      console.error('地图实例创建失败:', error);
+      setMapError(error);
+      return null;
+    }
+  }, [cleanupMapResources]);
+
+  // 🎨 添加省份轮廓图层
+  const addProvinceLayer = useCallback((map, AMap) => {
+    try {
+      const provinceLayer = new AMap.DistrictLayer.Province(SHAANXI_STYLES.province);
+      map.add(provinceLayer);
+      provinceLayers.current.province = provinceLayer;
+
+      const citiesLayer = new AMap.DistrictLayer.Province(SHAANXI_STYLES.cities);
+      map.add(citiesLayer);
+      provinceLayers.current.cities = citiesLayer;
+
+      console.log('🎨 省份图层添加完成');
+      return true;
+    } catch (error) {
+      console.error('省份图层添加失败:', error);
+      return false;
+    }
+  }, []);
+
+  // 🔧 地图事件处理
+  const setupMapEvents = useCallback((map) => {
+    map.on('complete', () => {
+      console.log('🎉 地图瓦片加载完成');
+      setMapReady(true);
       
-      marker.on("click", () => onClick?.(project));
-      marker.setMap(map.current);
-      markers.current.push(marker);
+      if (onMapReady && typeof onMapReady === 'function') {
+        onMapReady(map);
+      }
     });
-  };
 
-  // 数据或可见性变化时更新标注
-  useEffect(() => {
-    if (!map.current || !window.AMap) return;
-    renderMarkers(window.AMap, items, onMarkerClick);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, visible]);
+    map.on('error', (error) => {
+      console.error('地图运行时错误:', error);
+      setMapError(error);
+      setMapReady(true);
+    });
 
-  // 底图与路网切换
-  useEffect(() => {
-    const m = map.current;
-    if (!m) return;
+    if (enableClickLogging) {
+      map.on('click', (e) => {
+        console.log('地图点击坐标:', e.lnglat.toString());
+      });
+    }
+
+    console.log('📡 地图事件监听器设置完成');
+  }, [onMapReady, enableClickLogging]);
+
+  // 🚀 初始化地图的主函数
+  const initializeMap = useCallback(async () => {
+    if (initializationRef.current) {
+      console.log('⏸️ 地图初始化已在进行中，跳过重复调用');
+      return;
+    }
     
-    const { satellite, roadnet: rn } = layers.current;
+    initializationRef.current = true;
+    console.log('🚀 开始初始化地图系统...');
 
-    if (base === "satellite") {
-      satellite?.setMap(m);
-    } else {
-      satellite?.setMap(null);
+    try {
+      let AMap;
+      
+      if (window.AMap) {
+        console.log('✅ 使用已缓存的高德地图API');
+        AMap = window.AMap;
+      } else {
+        console.log('📦 加载高德地图API中...');
+        AMap = await AMapLoader.load(MAP_CONFIG);
+        console.log('✅ 高德地图API加载完成');
+      }
+
+      const map = createMapInstance(AMap);
+      if (!map) {
+        throw new Error('地图实例创建失败');
+      }
+      
+      mapInstance.current = map;
+      setupMapEvents(map);
+      addProvinceLayer(map, AMap);
+
+      console.log('🎊 地图系统初始化完成');
+
+    } catch (error) {
+      console.error('💥 地图初始化失败:', error);
+      setMapError(error);
+      setMapReady(true);
+      initializationRef.current = false;
     }
+  }, [createMapInstance, setupMapEvents, addProvinceLayer]);
 
-    if (roadnet) {
-      rn?.setMap(m);
-    } else {
-      rn?.setMap(null);
-    }
-  }, [base, roadnet]);
+  // 🎬 动画完成回调
+  const handleAnimationComplete = useCallback(() => {
+    console.log('🎬 开场动画完成，切换到地图视图');
+    setShowAnimation(false);
+  }, []);
 
-  // 视图复位
+  // 🔄 重新加载地图
+  const handleRetry = useCallback(() => {
+    console.log('🔄 用户触发地图重新加载');
+    setMapError(null);
+    setMapReady(false);
+    setShowAnimation(true);
+    cleanupMapResources();
+    setTimeout(() => {
+      initializeMap();
+    }, 500);
+  }, [cleanupMapResources, initializeMap]);
+
+  // 🎯 组件挂载时初始化地图
   useEffect(() => {
-    if (!map.current) return;
-    map.current.setZoomAndCenter(zoom, center);
-  }, [center, zoom]);
+    initializeMap();
+  }, [initializeMap]);
 
-  return <div ref={mapRef} className="w-full h-full" />;
-}
+  // 🧹 组件卸载时清理资源
+  useEffect(() => {
+    return () => {
+      console.log('🗑️ MapView组件卸载，清理资源');
+      cleanupMapResources();
+    };
+  }, [cleanupMapResources]);
+
+  // 🎨 动态样式计算
+  const containerStyle = useMemo(() => ({
+    minHeight: '100vh',
+    backgroundColor: '#0a1929',
+    ...style
+  }), [style]);
+
+  // 📊 错误状态显示
+  if (mapError && !showAnimation) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-900 to-gray-900 text-white">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="mb-4 text-6xl">🗺️</div>
+          <h3 className="text-xl mb-2 font-semibold">地图服务暂时不可用</h3>
+          <p className="text-gray-300 text-sm mb-4 leading-relaxed">
+            {mapError.message || '网络连接或服务异常'}
+          </p>
+          <button 
+            onClick={handleRetry}
+            className="px-6 py-3 bg-blue-600 rounded-lg hover:bg-blue-700 transition-all duration-200 transform hover:scale-105 font-medium"
+          >
+            🔄 重新加载地图
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`w-full h-full relative ${className}`}>
+      {/* 🗺️ 地图容器 */}
+      <div 
+        ref={mapRef} 
+        className={`w-full h-full transition-opacity duration-500 ${
+          showAnimation ? 'opacity-0' : 'opacity-100'
+        }`}
+        style={containerStyle}
+      />
+
+      {/* 📍 底部状态栏 - 只在地图加载完成且不显示动画时显示 */}
+      {showStatusBar && !showAnimation && mapReady && mapInstance.current && (
+        <MapStatusBar map={mapInstance.current} />
+      )}
+
+      {/* 🎬 开场动画组件 */}
+      {showAnimation && (
+        <OpeningAnimation 
+          onComplete={handleAnimationComplete}
+          minDuration={mapReady ? 1800 : 3000}
+        />
+      )}
+    </div>
+  );
+};
+
+export default MapView;
