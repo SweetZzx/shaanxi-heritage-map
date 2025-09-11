@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useHeritageData } from '../HeritageDataManager';
-import { CATEGORY_COLORS, LEVEL_CONFIG } from '../../data';
+import { CATEGORY_COLORS, LEVEL_CONFIG } from '../../data/heritageConfig';
 
 const StatisticsWidget = ({ onAction }) => {
   const [activeTab, setActiveTab] = useState('overview');

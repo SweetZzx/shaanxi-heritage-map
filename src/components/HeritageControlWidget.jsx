@@ -1,19 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 import { useHeritageData } from './HeritageDataManager';
-
-// 颜色配置
-const CATEGORY_COLORS = {
-  '传统戏剧': '#06b6d4',
-  '传统音乐': '#3b82f6',
-  '传统舞蹈': '#8b5cf6',
-  '曲艺': '#ec4899',
-  '传统体育': '#f59e0b',
-  '传统美术': '#10b981',
-  '传统技艺': '#f97316',
-  '传统医药': '#84cc16',
-  '民俗': '#ef4444',
-  '民间文学': '#6366f1'
-};
+import { CATEGORY_COLORS } from '../data/heritageConfig';
 
 const HeritageControlWidget = ({ onAction }) => {
   const {
