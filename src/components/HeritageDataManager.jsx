@@ -1,7 +1,5 @@
-
 import React, { useState, useCallback, useMemo, createContext, useContext, useEffect } from 'react';
 
-// 🗄️ 非遗数据上下文
 const HeritageDataContext = createContext(null);
 
 export const useHeritageData = () => {
@@ -12,17 +10,12 @@ export const useHeritageData = () => {
   return context;
 };
 
-const HeritageDataManager = React.memo(({ 
-  data = [],
-  children,
-  onSelectionChange
-}) => {
-  // 🎯 简化状态管理 - 移除layerVisible，只用selectedCategories控制一切
+const HeritageDataManager = ({ data = [], children, onSelectionChange }) => {
   const [selectedCategories, setSelectedCategories] = useState(new Set());
   const [selectedHeritage, setSelectedHeritage] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // 📊 派生状态计算
+  // 派生状态计算
   const derivedData = useMemo(() => {
     let filteredData = data;
 
@@ -36,21 +29,17 @@ const HeritageDataManager = React.memo(({
       );
     }
 
-    // 简化分类过滤逻辑：只用selectedCategories控制
+    // 分类过滤逻辑
     const isHidingAll = selectedCategories.has('__HIDE_ALL__');
     
     if (isHidingAll) {
-      // 隐藏全部状态：返回空数组
       filteredData = [];
     } else if (selectedCategories.size > 0) {
-      // 有选中的分类：只显示选中的分类
       filteredData = filteredData.filter(item =>
         selectedCategories.has(item.category)
       );
     }
-    // 空选择：显示全部（filteredData保持不变）
 
-    // 计算是否可见：只要不是隐藏全部状态就可见
     const isVisible = !isHidingAll;
 
     return {
@@ -92,22 +81,20 @@ const HeritageDataManager = React.memo(({
     }
   }, [selectedCategories, derivedData.filtered, derivedData.visible, onSelectionChange]);
 
-  // 🎯 分类选择处理
+  // 事件处理函数
   const handleCategoryChange = useCallback((newSelectedCategories) => {
     setSelectedCategories(newSelectedCategories);
   }, []);
 
-  // 🏛️ 非遗项目选择
   const handleHeritageSelect = useCallback((heritage) => {
     setSelectedHeritage(heritage);
   }, []);
 
-  // 🔍 搜索功能
   const handleSearch = useCallback((query) => {
     setSearchQuery(query);
   }, []);
 
-  // 🎮 快速操作 - 简化版本
+  // 快速操作
   const showAll = useCallback(() => {
     setSelectedCategories(new Set());
   }, []);
@@ -130,37 +117,32 @@ const HeritageDataManager = React.memo(({
     handleCategoryChange(newSelected);
   }, [selectedCategories, handleCategoryChange]);
 
-  // 🎯 上下文值
+  const reset = useCallback(() => {
+    setSelectedCategories(new Set());
+    setSelectedHeritage(null);
+    setSearchQuery('');
+  }, []);
+
+  // 上下文值
   const contextValue = useMemo(() => ({
-    // 数据状态
     data: derivedData,
     selectedCategories,
     selectedHeritage,
     searchQuery,
-
-    // 操作方法
     onCategoryChange: handleCategoryChange,
     onHeritageSelect: handleHeritageSelect,
     onSearch: handleSearch,
-
-    // 快速操作
     showAll,
     hideAll,
     selectCategory,
     toggleCategory,
-
-    // 工具方法
     resetSelection: () => setSelectedCategories(new Set()),
     resetSearch: () => setSearchQuery(''),
-    reset: () => {
-      setSelectedCategories(new Set());
-      setSelectedHeritage(null);
-      setSearchQuery('');
-    }
+    reset
   }), [
     derivedData, selectedCategories, selectedHeritage, searchQuery,
     handleCategoryChange, handleHeritageSelect, handleSearch,
-    showAll, hideAll, selectCategory, toggleCategory
+    showAll, hideAll, selectCategory, toggleCategory, reset
   ]);
 
   return (
@@ -168,8 +150,6 @@ const HeritageDataManager = React.memo(({
       {children}
     </HeritageDataContext.Provider>
   );
-});
-
-HeritageDataManager.displayName = 'HeritageDataManager';
+};
 
 export default HeritageDataManager;

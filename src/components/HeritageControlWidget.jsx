@@ -1,10 +1,21 @@
-
 import React, { useCallback, useMemo } from 'react';
-import { CATEGORY_COLORS } from '../../data';
-import { useHeritageData } from '../HeritageDataManager';
+import { useHeritageData } from './HeritageDataManager';
+
+// 颜色配置
+const CATEGORY_COLORS = {
+  '传统戏剧': '#06b6d4',
+  '传统音乐': '#3b82f6',
+  '传统舞蹈': '#8b5cf6',
+  '曲艺': '#ec4899',
+  '传统体育': '#f59e0b',
+  '传统美术': '#10b981',
+  '传统技艺': '#f97316',
+  '传统医药': '#84cc16',
+  '民俗': '#ef4444',
+  '民间文学': '#6366f1'
+};
 
 const HeritageControlWidget = ({ onAction }) => {
-  // 使用数据管理上下文
   const {
     data,
     selectedCategories,
@@ -30,12 +41,11 @@ const HeritageControlWidget = ({ onAction }) => {
       categoryStats[item.category] = (categoryStats[item.category] || 0) + 1;
     });
 
-    // 检查是否是隐藏全部状态
     const isHidingAll = selectedCategories?.has('__HIDE_ALL__') || false;
     
     const selected = isHidingAll ? 0 : 
       (selectedCategories?.size === 0 ? 
-        data.raw.length : // 空选择 = 显示全部
+        data.raw.length :
         data.raw.filter(item => selectedCategories.has(item.category)).length);
 
     return {
@@ -63,13 +73,11 @@ const HeritageControlWidget = ({ onAction }) => {
 
     try {
       if (isShowingAll) {
-        // 当前是显示全部，点击后隐藏全部
         hideAll?.();
         onCategoryChange(new Set(['__HIDE_ALL__']));
       } else {
-        // 当前不是显示全部，点击后显示全部
         showAll?.();
-        onCategoryChange(new Set()); // 空集合 = 显示全部
+        onCategoryChange(new Set());
       }
     } catch (error) {
       console.error('显示全部按钮处理错误:', error);
@@ -81,41 +89,32 @@ const HeritageControlWidget = ({ onAction }) => {
     if (!onCategoryChange || !selectedCategories) return;
 
     try {
-      // 如果当前是隐藏全部状态，清除这个状态，然后只选中点击的分类
       if (stats.isHidingAll) {
         onCategoryChange(new Set([category]));
         return;
       }
       
-      // 如果当前是显示全部状态（空集合或所有分类都选中）
       if (selectedCategories.size === 0 || 
           (selectedCategories.size === allCategories.length && 
            allCategories.every(cat => selectedCategories.has(cat)))) {
-        // 从显示全部变为取消点击的分类
         const newSelected = new Set(allCategories.filter(cat => cat !== category));
         onCategoryChange(newSelected);
         return;
       }
       
-      // 普通的切换逻辑
       const newSelected = new Set(selectedCategories);
       
       if (newSelected.has(category)) {
-        // 取消选中该分类
         newSelected.delete(category);
-        // 如果取消后没有任何选中，变为隐藏全部状态
         if (newSelected.size === 0) {
           onCategoryChange(new Set(['__HIDE_ALL__']));
         } else {
           onCategoryChange(newSelected);
         }
       } else {
-        // 添加该分类到选中列表
         newSelected.add(category);
-        // 检查是否选中了所有分类
         if (newSelected.size === allCategories.length && 
             allCategories.every(cat => newSelected.has(cat))) {
-          // 所有分类都选中了，变为显示全部状态（空集合）
           onCategoryChange(new Set());
         } else {
           onCategoryChange(newSelected);
@@ -129,7 +128,6 @@ const HeritageControlWidget = ({ onAction }) => {
   // 计算分类列表
   const categoryList = Object.entries(stats.categoryStats).sort(([,a], [,b]) => b - a);
 
-  // 渲染前检查
   if (!data || !selectedCategories) {
     return (
       <div className="flex items-center justify-center h-32 text-slate-400">
@@ -143,7 +141,6 @@ const HeritageControlWidget = ({ onAction }) => {
 
   return (
     <div className="flex flex-col h-full">
-      {/* 分类筛选区域 */}
       <div className="bg-slate-800/30 rounded-lg border border-slate-700/30 flex flex-col flex-1">
         {/* 标题区域 */}
         <div className="flex-shrink-0 p-3 border-b border-slate-700/30">
@@ -165,18 +162,9 @@ const HeritageControlWidget = ({ onAction }) => {
               className={`w-full px-2.5 py-2.5 rounded-md text-xs transition-all duration-300 border text-left group relative overflow-hidden ${
                 isShowingAll
                   ? 'bg-green-600/25 text-white border-green-500/60 shadow-md'
-                  : 'bg-slate-800/40 text-slate-300 hover:bg-slate-700/50 border-slate-600/30 hover:transform hover:scale-101'
+                  : 'bg-slate-800/40 text-slate-300 hover:bg-slate-700/50 border-slate-600/30 hover:scale-101'
               }`}
             >
-              <div 
-                className="absolute inset-0 opacity-0 group-hover:opacity-15 transition-opacity duration-300"
-                style={{
-                  background: isShowingAll 
-                    ? 'linear-gradient(135deg, #10b98140, transparent)' 
-                    : 'linear-gradient(135deg, #64748b40, transparent)'
-                }}
-              ></div>
-              
               <div className="relative flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <div className={`w-3 h-3 rounded-full transition-all duration-300 bg-green-400 ${
@@ -198,15 +186,6 @@ const HeritageControlWidget = ({ onAction }) => {
                   {stats.selected}
                 </div>
               </div>
-
-              {isShowingAll && (
-                <>
-                  <div className="absolute left-0 top-0 w-0.5 h-full rounded-r-full bg-green-400"></div>
-                  <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-cyan-400 rounded-full flex items-center justify-center animate-pulse">
-                    <div className="w-1 h-1 bg-white rounded-full"></div>
-                  </div>
-                </>
-              )}
             </button>
           </div>
 
@@ -216,12 +195,10 @@ const HeritageControlWidget = ({ onAction }) => {
           {/* 分类按钮列表 */}
           <div className="flex-1 flex flex-col" style={{ gap: '0.375rem' }}>
             {categoryList.map(([category, count]) => {
-              // 分类是否被选中
               const isSelected = stats.isHidingAll ? false : 
                 (selectedCategories.size === 0 || selectedCategories.has(category));
               const color = CATEGORY_COLORS[category];
               
-              // 动态计算每个按钮的高度
               const buttonHeight = `calc((100% - ${(categoryList.length - 1) * 0.375}rem) / ${categoryList.length})`;
               
               return (
@@ -231,7 +208,7 @@ const HeritageControlWidget = ({ onAction }) => {
                   className={`w-full px-2.5 rounded-md text-xs transition-all duration-300 border text-left group relative overflow-hidden ${
                     isSelected
                       ? 'bg-opacity-25 text-white border-opacity-60 shadow-md'
-                      : 'bg-slate-800/40 text-slate-300 hover:bg-slate-700/50 border-slate-600/30 hover:transform hover:scale-101'
+                      : 'bg-slate-800/40 text-slate-300 hover:bg-slate-700/50 border-slate-600/30 hover:scale-101'
                   }`}
                   style={{
                     height: buttonHeight,
@@ -241,13 +218,6 @@ const HeritageControlWidget = ({ onAction }) => {
                     boxShadow: isSelected ? `0 0 8px ${color}30` : undefined
                   }}
                 >
-                  <div 
-                    className="absolute inset-0 opacity-0 group-hover:opacity-15 transition-opacity duration-300"
-                    style={{
-                      background: `linear-gradient(135deg, ${color}40, transparent)`
-                    }}
-                  ></div>
-                  
                   <div className="relative flex items-center justify-between h-full">
                     <div className="flex items-center space-x-2">
                       <div
@@ -275,18 +245,6 @@ const HeritageControlWidget = ({ onAction }) => {
                       {count}
                     </div>
                   </div>
-
-                  {isSelected && (
-                    <>
-                      <div 
-                        className="absolute left-0 top-0 w-0.5 h-full rounded-r-full"
-                        style={{ backgroundColor: color }}
-                      ></div>
-                      <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-cyan-400 rounded-full flex items-center justify-center animate-pulse">
-                        <div className="w-1 h-1 bg-white rounded-full"></div>
-                      </div>
-                    </>
-                  )}
                 </button>
               );
             })}

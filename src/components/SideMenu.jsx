@@ -1,6 +1,6 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
-import HeritageControlWidget from './widgets/HeritageControlWidget';
+import HeritageControlWidget from './HeritageControlWidget';
 import RegionDistributionWidget from './widgets/RegionDistributionWidget';
 import StatisticsWidget from './widgets/StatisticsWidget';
 

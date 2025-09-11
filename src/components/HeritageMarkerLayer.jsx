@@ -1,8 +1,32 @@
-
 import React, { useRef, useCallback, useEffect, useMemo } from 'react';
-import { CATEGORY_COLORS, LEVEL_CONFIG, MARKER_SIZE_CONFIG } from '../data';
 
-const HeritageMarkerLayer = React.memo(({
+// 配置常量
+const CATEGORY_COLORS = {
+  '传统戏剧': '#06b6d4',
+  '传统音乐': '#3b82f6', 
+  '传统舞蹈': '#8b5cf6',
+  '曲艺': '#ec4899',
+  '传统体育': '#f59e0b',
+  '传统美术': '#10b981',
+  '传统技艺': '#f97316',
+  '传统医药': '#84cc16',
+  '民俗': '#ef4444',
+  '民间文学': '#6366f1'
+};
+
+const LEVEL_CONFIG = {
+  '国家级': { zIndex: 100, opacity: 1, shadow: '0 0 8px rgba(255, 215, 0, 0.6)' },
+  '省级': { zIndex: 80, opacity: 0.9, shadow: '0 0 6px rgba(59, 130, 246, 0.5)' },
+  '市级': { zIndex: 60, opacity: 0.8, shadow: '0 0 4px rgba(156, 163, 175, 0.4)' }
+};
+
+const MARKER_SIZE_CONFIG = {
+  small: { width: 16, height: 20 },
+  medium: { width: 20, height: 26 },
+  large: { width: 24, height: 30 }
+};
+
+const HeritageMarkerLayer = ({
   mapInstance,
   data = [],
   visible = true,
@@ -14,24 +38,18 @@ const HeritageMarkerLayer = React.memo(({
   const markersRef = useRef(new Map());
   const layerReadyRef = useRef(false);
 
-  // 📏 获取当前标记尺寸配置
   const currentSize = MARKER_SIZE_CONFIG[markerSize] || MARKER_SIZE_CONFIG.small;
 
-  // 🎯 简化数据过滤逻辑
+  // 可见数据计算
   const visibleData = useMemo(() => {
-    // 基础安全检查
     if (!Array.isArray(data) || data.length === 0) {
       return [];
     }
-
-    // 简化逻辑：直接使用传入的data和visible
-    // HeritageDataManager已经处理了所有过滤逻辑，这里只需要根据visible显示或隐藏
     return visible ? data : [];
-  }, [data, visible, selectedCategories]);
+  }, [data, visible]);
 
-  // 🔺 创建三角形标记HTML
+  // 创建三角形标记HTML
   const createTriangleMarkerHTML = useCallback((heritage) => {
-    // 基础安全检查
     if (!heritage || typeof heritage !== 'object') {
       return '<div class="error-marker">❌</div>';
     }
@@ -46,7 +64,6 @@ const HeritageMarkerLayer = React.memo(({
            data-heritage-id="${heritage.id || 'unknown'}"
            data-category="${category}">
         
-        <!-- 三角形主体 -->
         <div class="triangle-body relative transition-all duration-200"
              style="
                width: 0;
@@ -60,7 +77,6 @@ const HeritageMarkerLayer = React.memo(({
              ">
         </div>
         
-        <!-- 悬停信息卡 -->
         <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
           <div class="bg-slate-900/95 backdrop-blur-sm text-white px-3 py-2 rounded-md shadow-xl border border-cyan-400/30 min-w-max text-xs">
             <div class="font-medium text-cyan-300">${name}</div>
@@ -69,19 +85,17 @@ const HeritageMarkerLayer = React.memo(({
           <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-4 border-transparent border-t-slate-900/95"></div>
         </div>
         
-        <!-- 选中状态指示器 -->
         <div class="selected-indicator absolute -inset-2 rounded-full border-2 border-cyan-400 opacity-0 scale-75 transition-all duration-300"></div>
       </div>
     `;
   }, [currentSize]);
 
-  // 📍 创建单个标记
+  // 创建单个标记
   const createMarker = useCallback((heritage) => {
     if (!mapInstance || !window.AMap || !heritage) {
       return null;
     }
 
-    // 检查坐标
     if (!heritage.coords || typeof heritage.coords.lng !== 'number' || typeof heritage.coords.lat !== 'number') {
       return null;
     }
@@ -96,7 +110,6 @@ const HeritageMarkerLayer = React.memo(({
         zIndex: levelConfig.zIndex
       });
 
-      // 标记点击事件
       marker.on('click', (e) => {
         const markerElement = e.target.getContent();
         
@@ -127,12 +140,11 @@ const HeritageMarkerLayer = React.memo(({
     }
   }, [mapInstance, createTriangleMarkerHTML, onMarkerClick]);
 
-  // 🗺️ 更新标记显示
+  // 更新标记显示
   const updateMarkers = useCallback(() => {
     if (!mapInstance) return;
 
     try {
-      // 获取当前需要显示的ID集合
       const currentIds = new Set(visibleData.map(item => item.id).filter(Boolean));
       const existingIds = new Set(markersRef.current.keys());
 
@@ -207,12 +219,12 @@ const HeritageMarkerLayer = React.memo(({
     }
   }, [mapInstance, visibleData, createMarker, onLayerReady]);
 
-  // 📍 监听数据变化并更新
+  // 监听数据变化并更新
   useEffect(() => {
     updateMarkers();
   }, [updateMarkers]);
 
-  // 🧹 组件卸载清理
+  // 组件卸载清理
   useEffect(() => {
     return () => {
       if (markersRef.current.size > 0) {
@@ -228,10 +240,7 @@ const HeritageMarkerLayer = React.memo(({
     };
   }, [mapInstance]);
 
-  // 这是一个纯逻辑组件，不渲染DOM
   return null;
-});
-
-HeritageMarkerLayer.displayName = 'HeritageMarkerLayer';
+};
 
 export default HeritageMarkerLayer;
