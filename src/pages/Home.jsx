@@ -4,7 +4,7 @@ import SideMenu from '../components/SideMenu';
 import HeritageDataManager, { useHeritageData } from '../components/HeritageDataManager';
 import { useMapInstance } from '../hooks/useMapInstance';
 import { useMenuActions } from '../hooks/useMenuActions';
-import { heritageData } from '../data/heritageData1';
+import { heritageData } from '../data/heritageData';
 
 const HomeContent = ({ isInteractive }) => {
   const { mapInstance, markerLayer } = useMapInstance();

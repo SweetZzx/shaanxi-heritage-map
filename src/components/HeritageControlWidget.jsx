@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
-import { useHeritageData } from '../HeritageDataManager';
-import { CATEGORY_COLORS } from '../../data/heritageConfig';
+import { useHeritageData } from './HeritageDataManager';
+import { CATEGORY_COLORS } from '../data/heritageConfig';
 
 const HeritageControlWidget = ({ onAction }) => {
   const {

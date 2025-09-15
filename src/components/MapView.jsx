@@ -1,8 +1,64 @@
+
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import AMapLoader from '@amap/amap-jsapi-loader';
 import OpeningAnimation from './OpeningAnimation';
 import MapStatusBar from './MapStatusBar';
-import { MAP_CONFIG ,INITIAL_MAP_OPTIONS,SHAANXI_STYLES } from '../data/mapConfig';
+
+// 🎯 配置常量提取
+const MAP_CONFIG = {
+  key: "beed5a6b0db09b8b4f0c01d3b1b5a7d6",
+  version: "2.0",
+  plugins: [
+    "AMap.DistrictLayer", 
+    "AMap.TileLayer",
+    "AMap.Marker",
+    "AMap.InfoWindow",
+    "AMap.Geolocation",
+    "AMap.ToolBar",
+    "AMap.Scale"
+  ]
+};
+
+const INITIAL_MAP_OPTIONS = {
+  center: [108.95, 34.27],
+  zoom: 7,
+  viewMode: "3D",
+  pitch: 40,
+  mapStyle: "amap://styles/darkblue",
+  dragEnable: true,
+  zoomEnable: true,
+  scrollWheel: true,
+  rotateEnable: true,
+  pitchEnable: true,
+  showBuildingBlock: true,
+  showLabel: true
+};
+
+// 🎨 陕西省样式配置
+const SHAANXI_STYLES = {
+  province: {
+    zIndex: 8,
+    adcode: ["610000"],
+    depth: 0,
+    styles: {
+      fill: "rgba(64, 224, 255, 0.08)",
+      stroke: "#40E0FF",
+      "stroke-width": 3,
+    },
+  },
+  cities: {
+    zIndex: 10,
+    adcode: ["610000"],
+    depth: 1,
+    styles: {
+      fill: "rgba(30, 144, 255, 0.06)",
+      "city-stroke": "#1E90FF",
+      "stroke-width": 2,
+      "county-stroke": "#4682B4",
+      "county-stroke-width": 1,
+    },
+  }
+};
 
 // ✅ 使用默认参数替代 defaultProps
 const MapView = ({ 
@@ -10,7 +66,7 @@ const MapView = ({
   className = '', 
   style = {},
   enableClickLogging = false,
-  showStatusBar = true  
+  showStatusBar = true  // 🎯 新增状态栏显示控制
 }) => {
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
