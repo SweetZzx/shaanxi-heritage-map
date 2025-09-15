@@ -1,6 +1,6 @@
 import { HashRouter, Routes, Route } from "react-router-dom";
 import React, { useState, useCallback } from 'react';
-import Home from "./pages/Home.jsx";
+import Home2 from "./pages/Home2.jsx";
 import OpeningAnimation from './components/OpeningAnimation.jsx';
 
 export default function App() {
@@ -17,7 +17,7 @@ export default function App() {
         <Routes>
           <Route 
             path="/" 
-            element={<Home isInteractive={isAnimationComplete} />} 
+            element={<Home2 isInteractive={isAnimationComplete} />} 
           />
         </Routes>
       </HashRouter>

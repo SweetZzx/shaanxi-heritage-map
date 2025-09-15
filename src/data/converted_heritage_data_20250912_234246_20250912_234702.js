@@ -1,5 +1,7 @@
 // 自动生成于 2025-09-12 23:47:02
-export const heritageData = [
+// 来源文件: converted_heritage_data_20250912_234246.json
+
+const data = [
   {
     id: "1",
     name: "石泉庖汤会",
@@ -10557,3 +10559,5 @@ export const heritageData = [
     status: "在展"
   }
 ];
+
+export default data;
