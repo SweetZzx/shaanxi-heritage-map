@@ -1,18 +1,18 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import tailwindcss from "@tailwindcss/vite";
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 
-// 获取当前环境变量以设置基础路径
-const base =
-  import.meta.env.VITE_GITHUB_REF === "refs/heads/main" ? "/Map-app/main/" : "/Map-app/onlyMap/";
+// 访问环境变量
+const githubRef = process.env.VITE_GITHUB_REF;
+
+const base = githubRef === 'refs/heads/main'
+  ? '/shaanxi-heritage-map/main/'
+  : '/shaanxi-heritage-map/onlyMap/';
 
 export default defineConfig({
   plugins: [react()],
-  base: '/shaanxi-heritage-map/', 
+  base,
   build: {
     outDir: 'dist',
-    sourcemap: false
-  }
-})
-
-
+    sourcemap: false,
+  },
+});
