@@ -2,7 +2,7 @@ name: Deploy Vite site to GitHub Pages
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "onlyMap" ]  # 监听这两个分支的推送
   workflow_dispatch:
 
 permissions:
@@ -50,3 +50,5 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          path: dist  # 这里可以继续使用 dist，如需不同目录，请更改为具体目录
