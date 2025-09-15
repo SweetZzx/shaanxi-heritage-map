@@ -2,7 +2,7 @@ name: Deploy Vite site to GitHub Pages
 
 on:
   push:
-    branches: ["main", "onlyMap"] # 监听这两个分支的推送
+    branches: [ "main", "onlyMap" ]  
   workflow_dispatch:
 
 permissions:
@@ -30,16 +30,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Set Output Directory
+        id: set.dir
+        run: |
+          echo "output_dir=${GITHUB_REF##*/}" >> $GITHUB_ENV
+          if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
+            echo "main" >> $GITHUB_ENV
+          else
+            echo "onlyMap" >> $GITHUB_ENV
+          fi
+
       - name: Build
         env:
           VITE_AMAP_KEY: ${{ secrets.VITE_AMAP_KEY }}
         run: npm run build
-
-      - name: Set Output Directory
-        id: set_dir
-        run:
-          echo "output_dir=$(if [[ '${{ github.ref }}' == 'refs/heads/main' ]]; then echo 'main';
-          else echo 'onlyMap'; fi)" >> $GITHUB_ENV
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
@@ -57,9 +61,4 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
         with:
-          path: dist # 使用 dist 目录
-
-      - name: Move files to respective directories
-        run: |
-          mkdir -p ${{ env.output_dir }}
-          mv dist/* ${{ env.output_dir }}/
+          path: dist
